@@ -46,6 +46,35 @@ silver.merge(latest_change_per_order, "t.order_id = s.order_id")
 | A message is not valid JSON | Routed to `bronze_cdc_dead_letters` with its Kafka partition and offset; the stream keeps going |
 | A tombstone (null value) arrives | Counted and kept in bronze, ignored by silver |
 
+## Sample output
+
+From CI, through a real Kafka broker (Redpanda). Every CI run posts this report on its
+[run summary page](https://github.com/kaajjalchoudhary/cdc-streaming-lakehouse/actions/workflows/ci.yml).
+
+```
+silver_orders
+  live orders 277, soft-deleted 23, highest LSN applied 1500
+  delivered    158
+  paid          52
+  placed        15
+  shipped       52
+
+bronze_cdc_events
+  1706 records in 5 micro-batches
+  dead letters: 3
+
+gold_daily_orders (revenue of live orders by day)
+  2026-03-01    31 orders    6,457.56
+  2026-03-02    54 orders   10,911.37
+  2026-03-03    60 orders   12,641.90
+  2026-03-04    55 orders   12,099.46
+  2026-03-05    60 orders   12,043.23
+  2026-03-06    17 orders    3,266.05
+```
+
+1,706 Kafka messages (1,500 real changes plus redeliveries, a replayed range, tombstones and 3
+poison pills) became exactly the 277 live and 23 deleted orders of the source table.
+
 ## Quick start
 
 Requires Python 3.10+, Java 11 or 17, and Docker for Kafka.
