@@ -1,0 +1,18 @@
+[project]
+name = "cdc-streaming-lakehouse"
+version = "1.0.0"
+description = "Debezium-style CDC from Kafka into Delta Lake with Spark Structured Streaming, exactly once."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 125
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP"]

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KAFKA_BOOTSTRAP: localhost:9092
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Start Redpanda (Kafka API)
+        run: |
+          docker run -d --name redpanda -p 9092:9092 redpandadata/redpanda:v24.2.7 \
+            redpanda start --mode dev-container --smp 1 \
+            --kafka-addr PLAINTEXT://0.0.0.0:9092 --advertise-kafka-addr PLAINTEXT://localhost:9092
+          for i in $(seq 1 30); do
+            docker exec redpanda rpk cluster health 2>/dev/null | grep -q 'Healthy:.*true' && break
+            sleep 2
+          done
+          docker exec redpanda rpk cluster config set auto_create_topics_enabled true
+          docker exec redpanda rpk cluster health
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cache Spark packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.ivy2
+          key: ivy-cdc-${{ hashFiles('requirements.txt', 'cdcstream/spark.py') }}
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Tests (file source and real Kafka)
+        run: pytest -v
+
+      - name: Run the pipeline through Kafka
+        run: |
+          python -m cdcstream produce --kafka "$KAFKA_BOOTSTRAP"
+          python -m cdcstream consume --kafka "$KAFKA_BOOTSTRAP" | tee report.txt
+
+      - name: Publish the report to the run summary
+        run: |
+          {
+            echo "## CDC streaming report (Kafka -> Delta)"
+            echo '```'
+            grep -v '^:: loading settings' report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

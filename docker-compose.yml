@@ -1,0 +1,16 @@
+# Local Kafka API (Redpanda) plus a web console at http://localhost:8080
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command: >
+      redpanda start --mode dev-container --smp 1
+      --kafka-addr PLAINTEXT://0.0.0.0:9092 --advertise-kafka-addr PLAINTEXT://localhost:9092
+    ports:
+      - "9092:9092"
+  console:
+    image: redpandadata/console:v2.7.2
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports:
+      - "8080:8080"
+    depends_on: [redpanda]
