@@ -1,4 +1,4 @@
-pyspark==3.5.3
+pyspark==3.5.9
 delta-spark==3.2.1
 confluent-kafka>=2.5,<3
 pytest>=8,<10
