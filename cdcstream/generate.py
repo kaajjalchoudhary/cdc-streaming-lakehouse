@@ -62,7 +62,7 @@ def generate(cfg: GenerateConfig | None = None) -> ChangeStream:
     next_id, clock = 1, cfg.start
 
     for lsn in range(1, cfg.events + 1):
-        clock += timedelta(seconds=rng.randint(5, 120))
+        clock += timedelta(seconds=rng.randint(60, 900))  # the stream spans about a week
         live = sorted(table)
         roll = rng.random()
         if next_id <= cfg.max_orders and (not live or roll < 0.35):
